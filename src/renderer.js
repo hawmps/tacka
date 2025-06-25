@@ -109,10 +109,13 @@ function displayAnalytics(analytics, dateRange) {
   content.innerHTML = html;
 }
 
+let allEntries = [];
+
 async function loadEntries() {
   try {
-    const entries = await ipcRenderer.invoke('get-entries');
-    displayEntries(entries);
+    allEntries = await ipcRenderer.invoke('get-entries');
+    displayEntries(allEntries);
+    updateSearchResults(allEntries.length, allEntries.length);
   } catch (error) {
     document.getElementById('entries-content').innerHTML = '<p>Error loading entries</p>';
   }
@@ -122,7 +125,12 @@ function displayEntries(entries) {
   const content = document.getElementById('entries-content');
   
   if (entries.length === 0) {
-    content.innerHTML = '<p>No entries yet. Start logging your work!</p>';
+    const searchTerm = document.getElementById('searchInput').value;
+    if (searchTerm) {
+      content.innerHTML = '<p>No entries match your search.</p>';
+    } else {
+      content.innerHTML = '<p>No entries yet. Start logging your work!</p>';
+    }
     return;
   }
   
@@ -178,11 +186,48 @@ async function editEntry(entryId) {
   }
 }
 
+function searchEntries(searchTerm) {
+  if (!searchTerm.trim()) {
+    displayEntries(allEntries);
+    updateSearchResults(allEntries.length, allEntries.length);
+    return;
+  }
+  
+  const searchLower = searchTerm.toLowerCase();
+  const filteredEntries = allEntries.filter(entry => {
+    const taskMatch = entry.task.toLowerCase().includes(searchLower);
+    const requestorMatch = entry.requestor.toLowerCase().includes(searchLower);
+    const tagsMatch = entry.tags && entry.tags.toLowerCase().includes(searchLower);
+    
+    return taskMatch || requestorMatch || tagsMatch;
+  });
+  
+  displayEntries(filteredEntries);
+  updateSearchResults(filteredEntries.length, allEntries.length);
+}
+
+function updateSearchResults(shown, total) {
+  const resultsDiv = document.getElementById('searchResults');
+  const searchTerm = document.getElementById('searchInput').value;
+  
+  if (searchTerm.trim()) {
+    resultsDiv.textContent = `Showing ${shown} of ${total} entries`;
+  } else {
+    resultsDiv.textContent = '';
+  }
+}
+
 async function deleteEntry(entryId) {
   if (confirm('Are you sure you want to delete this entry?')) {
     try {
       await ipcRenderer.invoke('delete-entry', entryId);
-      loadEntries();
+      await loadEntries();
+      
+      // Re-apply search if there's a search term
+      const searchTerm = document.getElementById('searchInput').value;
+      if (searchTerm.trim()) {
+        searchEntries(searchTerm);
+      }
     } catch (error) {
       alert('Error deleting entry: ' + error.message);
     }
@@ -253,4 +298,12 @@ function setDatePreset(preset) {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('task').focus();
+  
+  // Add search functionality
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      searchEntries(e.target.value);
+    });
+  }
 });
