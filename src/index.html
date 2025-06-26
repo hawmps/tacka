@@ -227,6 +227,142 @@
       color: #6c757d;
       margin-top: 5px;
     }
+    
+    .date-filter-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .date-filter-btn {
+      padding: 8px 16px;
+      background: #f8f9fa;
+      border: 2px solid #ddd;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      color: #495057;
+    }
+    
+    .date-filter-btn:hover {
+      background: #e9ecef;
+      border-color: #adb5bd;
+    }
+    
+    .date-filter-btn.active {
+      background: #007AFF;
+      border-color: #007AFF;
+      color: white;
+    }
+    
+    .date-filter-btn.active:hover {
+      background: #0056b3;
+      border-color: #0056b3;
+    }
+    
+    .view-toggle {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+    
+    .view-toggle-btn {
+      padding: 8px 16px;
+      background: #f8f9fa;
+      border: 2px solid #ddd;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      color: #495057;
+    }
+    
+    .view-toggle-btn:hover {
+      background: #e9ecef;
+      border-color: #adb5bd;
+    }
+    
+    .view-toggle-btn.active {
+      background: #007AFF;
+      border-color: #007AFF;
+      color: white;
+    }
+    
+    .view-toggle-btn.active:hover {
+      background: #0056b3;
+      border-color: #0056b3;
+    }
+    
+    .chart-container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .chart {
+      display: flex;
+      align-items: end;
+      gap: 15px;
+      min-height: 300px;
+      padding: 20px 0;
+      border-bottom: 2px solid #ddd;
+    }
+    
+    .chart-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 60px;
+      position: relative;
+    }
+    
+    .chart-bar-fill {
+      background: linear-gradient(to top, #007AFF, #5AC8FA);
+      border-radius: 4px 4px 0 0;
+      width: 40px;
+      min-height: 4px;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .chart-bar-fill:hover {
+      background: linear-gradient(to top, #0056b3, #339af0);
+      transform: scale(1.05);
+    }
+    
+    .chart-value {
+      position: absolute;
+      top: -25px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #495057;
+      white-space: nowrap;
+    }
+    
+    .chart-label {
+      margin-top: 10px;
+      font-size: 11px;
+      text-align: center;
+      color: #6c757d;
+      max-width: 80px;
+      word-wrap: break-word;
+      line-height: 1.2;
+    }
+    
+    .chart-section {
+      margin-bottom: 30px;
+    }
+    
+    .chart-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #495057;
+    }
   </style>
 </head>
 <body>
@@ -270,6 +406,13 @@
       <h1>Your Entries</h1>
       <div class="search-container">
         <input type="text" id="searchInput" class="search-input" placeholder="Search entries by task, requestor, or tags...">
+        <div class="date-filter-buttons">
+          <button class="date-filter-btn" data-filter="all">All</button>
+          <button class="date-filter-btn" data-filter="today">Today</button>
+          <button class="date-filter-btn" data-filter="yesterday">Yesterday</button>
+          <button class="date-filter-btn" data-filter="last7days">Last 7 Days</button>
+          <button class="date-filter-btn" data-filter="lastmonth">Last Month</button>
+        </div>
         <div id="searchResults" class="search-results"></div>
       </div>
       <div id="entries-content">
@@ -295,6 +438,11 @@
           <button class="preset-btn" onclick="setDatePreset('quarter')">This Quarter</button>
           <button class="preset-btn" onclick="setDatePreset('year')">This Year</button>
         </div>
+      </div>
+      <div class="view-toggle">
+        <span>View:</span>
+        <button class="view-toggle-btn active" data-view="table">Table</button>
+        <button class="view-toggle-btn" data-view="chart">Chart</button>
       </div>
       <div id="analytics-content">
         <p>Loading analytics...</p>

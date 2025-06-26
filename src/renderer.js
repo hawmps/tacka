@@ -74,6 +74,14 @@ function displayAnalytics(analytics, dateRange) {
     dateRangeText = ` (${startDate} - ${endDate})`;
   }
   
+  if (currentAnalyticsView === 'table') {
+    displayAnalyticsTable(analytics, dateRangeText, content);
+  } else {
+    displayAnalyticsChart(analytics, dateRangeText, content);
+  }
+}
+
+function displayAnalyticsTable(analytics, dateRangeText, content) {
   let html = `<h3>Summary${dateRangeText}</h3>`;
   html += `<div class="analytics-item"><span>Total Entries:</span><span>${analytics.totalEntries}</span></div>`;
   html += `<div class="analytics-item"><span>Total Hours:</span><span>${analytics.totalDuration.toFixed(2)}</span></div>`;
@@ -109,7 +117,69 @@ function displayAnalytics(analytics, dateRange) {
   content.innerHTML = html;
 }
 
+function displayAnalyticsChart(analytics, dateRangeText, content) {
+  let html = `<h3>Summary${dateRangeText}</h3>`;
+  html += `<div class="analytics-item"><span>Total Entries:</span><span>${analytics.totalEntries}</span></div>`;
+  html += `<div class="analytics-item"><span>Total Hours:</span><span>${analytics.totalDuration.toFixed(2)}</span></div>`;
+  
+  if (analytics.totalEntries === 0) {
+    html += '<p>No entries found for the selected date range.</p>';
+    content.innerHTML = html;
+    return;
+  }
+  
+  // Time by Tag Chart
+  if (Object.keys(analytics.byTag).length > 0) {
+    html += '<div class="chart-section">';
+    html += '<div class="chart-title">Time by Tag</div>';
+    html += '<div class="chart-container">';
+    html += '<div class="chart">';
+    
+    const tagEntries = Object.entries(analytics.byTag).sort(([,a], [,b]) => b - a);
+    const maxTagHours = Math.max(...tagEntries.map(([,hours]) => hours));
+    
+    tagEntries.forEach(([tag, hours]) => {
+      const height = Math.max((hours / maxTagHours) * 250, 4);
+      html += `<div class="chart-bar">
+        <div class="chart-bar-fill" style="height: ${height}px;">
+          <div class="chart-value">${hours.toFixed(1)}h</div>
+        </div>
+        <div class="chart-label">${tag}</div>
+      </div>`;
+    });
+    
+    html += '</div></div></div>';
+  }
+  
+  // Time by Requestor Chart
+  if (Object.keys(analytics.byRequestor).length > 0) {
+    html += '<div class="chart-section">';
+    html += '<div class="chart-title">Time by Requestor</div>';
+    html += '<div class="chart-container">';
+    html += '<div class="chart">';
+    
+    const requestorEntries = Object.entries(analytics.byRequestor).sort(([,a], [,b]) => b - a);
+    const maxRequestorHours = Math.max(...requestorEntries.map(([,hours]) => hours));
+    
+    requestorEntries.forEach(([requestor, hours]) => {
+      const height = Math.max((hours / maxRequestorHours) * 250, 4);
+      html += `<div class="chart-bar">
+        <div class="chart-bar-fill" style="height: ${height}px;">
+          <div class="chart-value">${hours.toFixed(1)}h</div>
+        </div>
+        <div class="chart-label">${requestor}</div>
+      </div>`;
+    });
+    
+    html += '</div></div></div>';
+  }
+  
+  content.innerHTML = html;
+}
+
 let allEntries = [];
+let currentDateFilter = 'all';
+let currentAnalyticsView = 'table';
 
 async function loadEntries() {
   try {
@@ -186,21 +256,62 @@ async function editEntry(entryId) {
   }
 }
 
-function searchEntries(searchTerm) {
-  if (!searchTerm.trim()) {
-    displayEntries(allEntries);
-    updateSearchResults(allEntries.length, allEntries.length);
-    return;
-  }
+function filterEntriesByDate(entries, dateFilter) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
-  const searchLower = searchTerm.toLowerCase();
-  const filteredEntries = allEntries.filter(entry => {
-    const taskMatch = entry.task.toLowerCase().includes(searchLower);
-    const requestorMatch = entry.requestor.toLowerCase().includes(searchLower);
-    const tagsMatch = entry.tags && entry.tags.toLowerCase().includes(searchLower);
+  switch (dateFilter) {
+    case 'today':
+      return entries.filter(entry => {
+        const entryDate = new Date(entry.timestamp);
+        const entryDay = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+        return entryDay.getTime() === today.getTime();
+      });
     
-    return taskMatch || requestorMatch || tagsMatch;
-  });
+    case 'yesterday':
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return entries.filter(entry => {
+        const entryDate = new Date(entry.timestamp);
+        const entryDay = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+        return entryDay.getTime() === yesterday.getTime();
+      });
+    
+    case 'last7days':
+      const last7Days = new Date(today);
+      last7Days.setDate(last7Days.getDate() - 7);
+      return entries.filter(entry => {
+        const entryDate = new Date(entry.timestamp);
+        return entryDate >= last7Days;
+      });
+    
+    case 'lastmonth':
+      const lastMonth = new Date(today);
+      lastMonth.setDate(lastMonth.getDate() - 30);
+      return entries.filter(entry => {
+        const entryDate = new Date(entry.timestamp);
+        return entryDate >= lastMonth;
+      });
+    
+    case 'all':
+    default:
+      return entries;
+  }
+}
+
+function searchEntries(searchTerm) {
+  let filteredEntries = filterEntriesByDate(allEntries, currentDateFilter);
+  
+  if (searchTerm && searchTerm.trim()) {
+    const searchLower = searchTerm.toLowerCase();
+    filteredEntries = filteredEntries.filter(entry => {
+      const taskMatch = entry.task.toLowerCase().includes(searchLower);
+      const requestorMatch = entry.requestor.toLowerCase().includes(searchLower);
+      const tagsMatch = entry.tags && entry.tags.toLowerCase().includes(searchLower);
+      
+      return taskMatch || requestorMatch || tagsMatch;
+    });
+  }
   
   displayEntries(filteredEntries);
   updateSearchResults(filteredEntries.length, allEntries.length);
@@ -306,4 +417,49 @@ document.addEventListener('DOMContentLoaded', () => {
       searchEntries(e.target.value);
     });
   }
+  
+  // Add date filter functionality
+  const dateFilterButtons = document.querySelectorAll('.date-filter-btn');
+  dateFilterButtons.forEach(button => {
+    button.addEventListener('click', (e) => {
+      // Remove active class from all buttons
+      dateFilterButtons.forEach(btn => btn.classList.remove('active'));
+      
+      // Add active class to clicked button
+      e.target.classList.add('active');
+      
+      // Update current filter
+      currentDateFilter = e.target.getAttribute('data-filter');
+      
+      // Re-apply search with new date filter
+      const searchTerm = document.getElementById('searchInput').value;
+      searchEntries(searchTerm);
+    });
+  });
+  
+  // Set default active button
+  const defaultButton = document.querySelector('.date-filter-btn[data-filter="all"]');
+  if (defaultButton) {
+    defaultButton.classList.add('active');
+  }
+  
+  // Add view toggle functionality for Analytics
+  const viewToggleButtons = document.querySelectorAll('.view-toggle-btn');
+  viewToggleButtons.forEach(button => {
+    button.addEventListener('click', (e) => {
+      // Remove active class from all buttons
+      viewToggleButtons.forEach(btn => btn.classList.remove('active'));
+      
+      // Add active class to clicked button
+      e.target.classList.add('active');
+      
+      // Update current view
+      currentAnalyticsView = e.target.getAttribute('data-view');
+      
+      // Re-render analytics with new view
+      if (document.getElementById('analytics-tab').classList.contains('active')) {
+        loadAnalytics();
+      }
+    });
+  });
 });
