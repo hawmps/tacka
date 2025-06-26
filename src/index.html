@@ -363,6 +363,120 @@
       margin-bottom: 15px;
       color: #495057;
     }
+    
+    .management-section {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .management-section h3 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #495057;
+    }
+    
+    .management-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #dee2e6;
+    }
+    
+    .management-item:last-child {
+      border-bottom: none;
+    }
+    
+    .management-item-info {
+      flex: 1;
+    }
+    
+    .management-item-name {
+      font-weight: bold;
+      color: #495057;
+    }
+    
+    .management-item-count {
+      font-size: 12px;
+      color: #6c757d;
+    }
+    
+    .management-actions {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .management-btn {
+      padding: 4px 8px;
+      font-size: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      background: white;
+      transition: all 0.2s ease;
+    }
+    
+    .management-btn:hover {
+      background: #f8f9fa;
+    }
+    
+    .management-btn.rename {
+      color: #007AFF;
+      border-color: #007AFF;
+    }
+    
+    .management-btn.rename:hover {
+      background: #007AFF;
+      color: white;
+    }
+    
+    .management-btn.merge {
+      color: #28a745;
+      border-color: #28a745;
+    }
+    
+    .management-btn.merge:hover {
+      background: #28a745;
+      color: white;
+    }
+    
+    .management-btn.delete {
+      color: #dc3545;
+      border-color: #dc3545;
+    }
+    
+    .management-btn.delete:hover {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .merge-form {
+      display: none;
+      background: #e9ecef;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    
+    .merge-form.active {
+      display: block;
+    }
+    
+    .merge-form select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    
+    .merge-form-actions {
+      display: flex;
+      gap: 10px;
+    }
   </style>
 </head>
 <body>
@@ -371,6 +485,7 @@
       <div class="tab active" onclick="showTab('log')">Log Work</div>
       <div class="tab" onclick="showTab('entries')">Entries</div>
       <div class="tab" onclick="showTab('analytics')">Analytics</div>
+      <div class="tab" onclick="showTab('manage')">Manage</div>
     </div>
     
     <div id="log-tab" class="tab-content active">
@@ -446,6 +561,24 @@
       </div>
       <div id="analytics-content">
         <p>Loading analytics...</p>
+      </div>
+    </div>
+    
+    <div id="manage-tab" class="tab-content">
+      <h1>Manage Data</h1>
+      
+      <div class="management-section">
+        <h3>Requestors</h3>
+        <div id="requestors-list">
+          <p>Loading requestors...</p>
+        </div>
+      </div>
+      
+      <div class="management-section">
+        <h3>Tags</h3>
+        <div id="tags-list">
+          <p>Loading tags...</p>
+        </div>
       </div>
     </div>
   </div>

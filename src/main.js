@@ -136,3 +136,96 @@ ipcMain.handle('minimize-window', () => {
     mainWindow.hide();
   }
 });
+
+ipcMain.handle('get-management-data', () => {
+  const entries = store.get('entries', []);
+  
+  // Aggregate requestors
+  const requestorCounts = {};
+  // Aggregate tags
+  const tagCounts = {};
+  
+  entries.forEach(entry => {
+    // Count requestors
+    if (entry.requestor) {
+      requestorCounts[entry.requestor] = (requestorCounts[entry.requestor] || 0) + 1;
+    }
+    
+    // Count tags
+    if (entry.tags) {
+      entry.tags.split(',').forEach(tag => {
+        const cleanTag = tag.trim();
+        if (cleanTag) {
+          tagCounts[cleanTag] = (tagCounts[cleanTag] || 0) + 1;
+        }
+      });
+    }
+  });
+  
+  // Convert to arrays sorted by count (descending)
+  const requestors = Object.entries(requestorCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+    
+  const tags = Object.entries(tagCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+  
+  return { requestors, tags };
+});
+
+ipcMain.handle('rename-item', (event, { type, oldName, newName }) => {
+  const entries = store.get('entries', []);
+  let updatedEntries = [...entries];
+  
+  if (type === 'requestor') {
+    updatedEntries = entries.map(entry => {
+      if (entry.requestor === oldName) {
+        return { ...entry, requestor: newName };
+      }
+      return entry;
+    });
+  } else if (type === 'tag') {
+    updatedEntries = entries.map(entry => {
+      if (entry.tags) {
+        const tags = entry.tags.split(',').map(tag => {
+          const cleanTag = tag.trim();
+          return cleanTag === oldName ? newName : cleanTag;
+        });
+        return { ...entry, tags: tags.join(', ') };
+      }
+      return entry;
+    });
+  }
+  
+  store.set('entries', updatedEntries);
+  return true;
+});
+
+ipcMain.handle('merge-item', (event, { type, sourceName, targetName }) => {
+  const entries = store.get('entries', []);
+  let updatedEntries = [...entries];
+  
+  if (type === 'requestor') {
+    updatedEntries = entries.map(entry => {
+      if (entry.requestor === sourceName) {
+        return { ...entry, requestor: targetName };
+      }
+      return entry;
+    });
+  } else if (type === 'tag') {
+    updatedEntries = entries.map(entry => {
+      if (entry.tags) {
+        const tags = entry.tags.split(',').map(tag => {
+          const cleanTag = tag.trim();
+          return cleanTag === sourceName ? targetName : cleanTag;
+        });
+        return { ...entry, tags: tags.join(', ') };
+      }
+      return entry;
+    });
+  }
+  
+  store.set('entries', updatedEntries);
+  return true;
+});

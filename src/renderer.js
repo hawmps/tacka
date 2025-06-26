@@ -52,6 +52,8 @@ function showTab(tabName) {
     loadAnalytics();
   } else if (tabName === 'entries') {
     loadEntries();
+  } else if (tabName === 'manage') {
+    loadManagementData();
   }
 }
 
@@ -175,6 +177,157 @@ function displayAnalyticsChart(analytics, dateRangeText, content) {
   }
   
   content.innerHTML = html;
+}
+
+async function loadManagementData() {
+  try {
+    const management = await ipcRenderer.invoke('get-management-data');
+    displayRequestors(management.requestors);
+    displayTags(management.tags);
+  } catch (error) {
+    console.error('Error loading management data:', error);
+    document.getElementById('requestors-list').innerHTML = '<p>Error loading requestors</p>';
+    document.getElementById('tags-list').innerHTML = '<p>Error loading tags</p>';
+  }
+}
+
+function displayRequestors(requestors) {
+  const container = document.getElementById('requestors-list');
+  
+  if (requestors.length === 0) {
+    container.innerHTML = '<p>No requestors found</p>';
+    return;
+  }
+  
+  let html = '';
+  requestors.forEach(requestor => {
+    html += `
+      <div class="management-item" data-type="requestor" data-name="${requestor.name}">
+        <div class="management-item-info">
+          <div class="management-item-name">${requestor.name}</div>
+          <div class="management-item-count">${requestor.count} entries</div>
+        </div>
+        <div class="management-actions">
+          <button class="management-btn rename" onclick="renameItem('requestor', '${requestor.name}')">Rename</button>
+          <button class="management-btn merge" onclick="showMergeForm('requestor', '${requestor.name}')">Merge</button>
+        </div>
+        <div class="merge-form" id="merge-form-requestor-${requestor.name.replace(/[^a-zA-Z0-9]/g, '_')}">
+          <label>Merge "${requestor.name}" into:</label>
+          <select id="merge-target-requestor-${requestor.name.replace(/[^a-zA-Z0-9]/g, '_')}">
+            ${requestors.filter(r => r.name !== requestor.name).map(r => `<option value="${r.name}">${r.name}</option>`).join('')}
+          </select>
+          <div class="merge-form-actions">
+            <button class="management-btn merge" onclick="mergeItem('requestor', '${requestor.name}')">Confirm Merge</button>
+            <button class="management-btn secondary" onclick="hideMergeForm('requestor', '${requestor.name}')">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+function displayTags(tags) {
+  const container = document.getElementById('tags-list');
+  
+  if (tags.length === 0) {
+    container.innerHTML = '<p>No tags found</p>';
+    return;
+  }
+  
+  let html = '';
+  tags.forEach(tag => {
+    html += `
+      <div class="management-item" data-type="tag" data-name="${tag.name}">
+        <div class="management-item-info">
+          <div class="management-item-name">${tag.name}</div>
+          <div class="management-item-count">${tag.count} entries</div>
+        </div>
+        <div class="management-actions">
+          <button class="management-btn rename" onclick="renameItem('tag', '${tag.name}')">Rename</button>
+          <button class="management-btn merge" onclick="showMergeForm('tag', '${tag.name}')">Merge</button>
+        </div>
+        <div class="merge-form" id="merge-form-tag-${tag.name.replace(/[^a-zA-Z0-9]/g, '_')}">
+          <label>Merge "${tag.name}" into:</label>
+          <select id="merge-target-tag-${tag.name.replace(/[^a-zA-Z0-9]/g, '_')}">
+            ${tags.filter(t => t.name !== tag.name).map(t => `<option value="${t.name}">${t.name}</option>`).join('')}
+          </select>
+          <div class="merge-form-actions">
+            <button class="management-btn merge" onclick="mergeItem('tag', '${tag.name}')">Confirm Merge</button>
+            <button class="management-btn secondary" onclick="hideMergeForm('tag', '${tag.name}')">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+async function renameItem(type, oldName) {
+  const newName = prompt(`Enter new name for ${type} "${oldName}":`, oldName);
+  
+  if (newName && newName.trim() && newName !== oldName) {
+    try {
+      await ipcRenderer.invoke('rename-item', { type, oldName, newName: newName.trim() });
+      loadManagementData();
+      
+      // Refresh other tabs if they're showing data
+      if (document.getElementById('entries-tab').classList.contains('active')) {
+        loadEntries();
+      }
+      if (document.getElementById('analytics-tab').classList.contains('active')) {
+        loadAnalytics();
+      }
+    } catch (error) {
+      alert(`Error renaming ${type}: ${error.message}`);
+    }
+  }
+}
+
+function showMergeForm(type, name) {
+  const formId = `merge-form-${type}-${name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const form = document.getElementById(formId);
+  if (form) {
+    form.classList.add('active');
+  }
+}
+
+function hideMergeForm(type, name) {
+  const formId = `merge-form-${type}-${name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const form = document.getElementById(formId);
+  if (form) {
+    form.classList.remove('active');
+  }
+}
+
+async function mergeItem(type, sourceName) {
+  const targetSelectId = `merge-target-${type}-${sourceName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const targetSelect = document.getElementById(targetSelectId);
+  const targetName = targetSelect.value;
+  
+  if (!targetName) {
+    alert('Please select a target to merge into');
+    return;
+  }
+  
+  if (confirm(`Are you sure you want to merge "${sourceName}" into "${targetName}"? This cannot be undone.`)) {
+    try {
+      await ipcRenderer.invoke('merge-item', { type, sourceName, targetName });
+      loadManagementData();
+      
+      // Refresh other tabs if they're showing data
+      if (document.getElementById('entries-tab').classList.contains('active')) {
+        loadEntries();
+      }
+      if (document.getElementById('analytics-tab').classList.contains('active')) {
+        loadAnalytics();
+      }
+    } catch (error) {
+      alert(`Error merging ${type}: ${error.message}`);
+    }
+  }
 }
 
 let allEntries = [];
