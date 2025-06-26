@@ -357,9 +357,34 @@ ipcMain.handle('generate-weekly-report', async (event, { startDate, endDate }) =
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const filename = `weekly-report-${report.metadata.periodStart}-to-${report.metadata.periodEnd}-${timestamp}.json`;
-    const desktopPath = path.join(os.homedir(), 'Desktop', filename);
     
-    // Write file to desktop
+    // Try different desktop paths for cross-platform compatibility
+    let desktopPath;
+    const possibleDesktopPaths = [
+      path.join(os.homedir(), 'Desktop'),
+      path.join(os.homedir(), 'OneDrive', 'Desktop'),
+      path.join(os.homedir(), 'Documents'),
+      os.homedir()
+    ];
+    
+    // Find the first existing directory
+    for (const possiblePath of possibleDesktopPaths) {
+      try {
+        if (fs.existsSync(possiblePath)) {
+          desktopPath = path.join(possiblePath, filename);
+          break;
+        }
+      } catch (e) {
+        // Continue to next path
+      }
+    }
+    
+    // Fallback to home directory if no desktop found
+    if (!desktopPath) {
+      desktopPath = path.join(os.homedir(), filename);
+    }
+    
+    // Write file
     fs.writeFileSync(desktopPath, JSON.stringify(report, null, 2));
     
     return {
