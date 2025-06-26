@@ -330,32 +330,30 @@ async function mergeItem(type, sourceName) {
   }
 }
 
-function calculateLastBusinessWeek() {
+function calculateCurrentBusinessWeek() {
   const today = new Date();
   const currentDay = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
   
-  // Calculate days back to get to last Friday
-  let daysToLastFriday;
+  // Calculate this week's Monday
+  let daysFromMonday;
   if (currentDay === 0) { // Sunday
-    daysToLastFriday = 2;
-  } else if (currentDay === 1) { // Monday
-    daysToLastFriday = 3;
-  } else { // Tuesday-Saturday
-    daysToLastFriday = currentDay + 1;
+    daysFromMonday = 6; // Last Monday was 6 days ago
+  } else {
+    daysFromMonday = currentDay - 1; // Days since Monday
   }
   
-  const lastFriday = new Date(today);
-  lastFriday.setDate(today.getDate() - daysToLastFriday);
+  const thisMonday = new Date(today);
+  thisMonday.setDate(today.getDate() - daysFromMonday);
   
-  // Last business week is Monday to Friday
-  const lastMonday = new Date(lastFriday);
-  lastMonday.setDate(lastFriday.getDate() - 4);
+  // This week's Friday
+  const thisFriday = new Date(thisMonday);
+  thisFriday.setDate(thisMonday.getDate() + 4);
   
   // Set times for proper date comparison
-  lastMonday.setHours(0, 0, 0, 0);
-  lastFriday.setHours(23, 59, 59, 999);
+  thisMonday.setHours(0, 0, 0, 0);
+  thisFriday.setHours(23, 59, 59, 999);
   
-  return { startDate: lastMonday, endDate: lastFriday };
+  return { startDate: thisMonday, endDate: thisFriday };
 }
 
 async function generateWeeklyReport() {
@@ -367,7 +365,8 @@ async function generateWeeklyReport() {
   outputDiv.style.display = 'none';
   
   try {
-    const { startDate, endDate } = calculateLastBusinessWeek();
+    // Changed to use current week instead of last week for testing
+    const { startDate, endDate } = calculateCurrentBusinessWeek();
     const report = await ipcRenderer.invoke('generate-weekly-report', { startDate, endDate });
     
     if (report.success) {
