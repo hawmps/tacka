@@ -360,7 +360,11 @@ function calculateLastBusinessWeek() {
 
 async function generateWeeklyReport() {
   const statusDiv = document.getElementById('report-status');
+  const outputDiv = document.getElementById('report-output');
+  const jsonTextarea = document.getElementById('report-json');
+  
   statusDiv.textContent = 'Generating weekly report...';
+  outputDiv.style.display = 'none';
   
   try {
     const { startDate, endDate } = calculateLastBusinessWeek();
@@ -369,13 +373,49 @@ async function generateWeeklyReport() {
     if (report.success) {
       statusDiv.innerHTML = `Weekly report generated successfully!<br>
         <strong>Period:</strong> ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}<br>
-        <strong>File:</strong> ${report.filename}<br>
         <strong>Entries:</strong> ${report.entryCount} entries, ${report.totalHours.toFixed(2)} hours`;
+      
+      // Display the JSON in the textarea
+      jsonTextarea.value = report.reportData;
+      outputDiv.style.display = 'block';
     } else {
       statusDiv.textContent = `Error: ${report.error}`;
+      outputDiv.style.display = 'none';
     }
   } catch (error) {
     statusDiv.textContent = `Error generating report: ${error.message}`;
+    outputDiv.style.display = 'none';
+  }
+}
+
+async function copyReportToClipboard() {
+  const jsonTextarea = document.getElementById('report-json');
+  const copyBtn = document.getElementById('copy-btn');
+  
+  try {
+    await navigator.clipboard.writeText(jsonTextarea.value);
+    
+    // Visual feedback
+    const originalText = copyBtn.textContent;
+    copyBtn.textContent = 'Copied!';
+    copyBtn.style.background = '#28a745';
+    copyBtn.style.color = 'white';
+    
+    setTimeout(() => {
+      copyBtn.textContent = originalText;
+      copyBtn.style.background = '';
+      copyBtn.style.color = '';
+    }, 2000);
+  } catch (error) {
+    // Fallback for older browsers
+    jsonTextarea.select();
+    document.execCommand('copy');
+    
+    const originalText = copyBtn.textContent;
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => {
+      copyBtn.textContent = originalText;
+    }, 2000);
   }
 }
 

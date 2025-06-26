@@ -232,9 +232,6 @@ ipcMain.handle('merge-item', (event, { type, sourceName, targetName }) => {
 
 ipcMain.handle('generate-weekly-report', async (event, { startDate, endDate }) => {
   try {
-    const fs = require('fs');
-    const path = require('path');
-    const os = require('os');
     
     const entries = store.get('entries', []);
     
@@ -354,43 +351,10 @@ ipcMain.handle('generate-weekly-report', async (event, { startDate, endDate }) =
       }
     };
     
-    // Generate filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const filename = `weekly-report-${report.metadata.periodStart}-to-${report.metadata.periodEnd}-${timestamp}.json`;
-    
-    // Try different desktop paths for cross-platform compatibility
-    let desktopPath;
-    const possibleDesktopPaths = [
-      path.join(os.homedir(), 'Desktop'),
-      path.join(os.homedir(), 'OneDrive', 'Desktop'),
-      path.join(os.homedir(), 'Documents'),
-      os.homedir()
-    ];
-    
-    // Find the first existing directory
-    for (const possiblePath of possibleDesktopPaths) {
-      try {
-        if (fs.existsSync(possiblePath)) {
-          desktopPath = path.join(possiblePath, filename);
-          break;
-        }
-      } catch (e) {
-        // Continue to next path
-      }
-    }
-    
-    // Fallback to home directory if no desktop found
-    if (!desktopPath) {
-      desktopPath = path.join(os.homedir(), filename);
-    }
-    
-    // Write file
-    fs.writeFileSync(desktopPath, JSON.stringify(report, null, 2));
-    
+    // Return the JSON report data instead of writing to file
     return {
       success: true,
-      filename: filename,
-      fullPath: desktopPath,
+      reportData: JSON.stringify(report, null, 2),
       entryCount: weeklyEntries.length,
       totalHours: report.metadata.totalHours,
       period: `${report.metadata.periodStart} to ${report.metadata.periodEnd}`
