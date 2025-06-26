@@ -192,6 +192,10 @@ This is a standalone application. All data is stored locally on your machine. Fo
 - All dependencies were installed successfully
 - The app has permission to register global keyboard shortcuts
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ---
 
 *Tracka - Simple, effective work logging for busy professionals*

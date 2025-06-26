@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Simple work logging app with keyboard shortcuts",
   "main": "src/main.js",
+  "license": "MIT",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
