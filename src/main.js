@@ -229,3 +229,153 @@ ipcMain.handle('merge-item', (event, { type, sourceName, targetName }) => {
   store.set('entries', updatedEntries);
   return true;
 });
+
+ipcMain.handle('generate-weekly-report', async (event, { startDate, endDate }) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    
+    const entries = store.get('entries', []);
+    
+    // Filter entries for the specified date range
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    const weeklyEntries = entries.filter(entry => {
+      const entryDate = new Date(entry.timestamp);
+      return entryDate >= start && entryDate <= end;
+    });
+    
+    // Generate comprehensive report structure for AI analysis
+    const report = {
+      metadata: {
+        reportType: "weekly_work_log",
+        generatedAt: new Date().toISOString(),
+        periodStart: start.toISOString().split('T')[0],
+        periodEnd: end.toISOString().split('T')[0],
+        periodDescription: `Business week ${start.toLocaleDateString()} to ${end.toLocaleDateString()}`,
+        entryCount: weeklyEntries.length,
+        totalHours: weeklyEntries.reduce((sum, entry) => sum + parseFloat(entry.duration || 0), 0)
+      },
+      summary: {
+        totalWorkHours: weeklyEntries.reduce((sum, entry) => sum + parseFloat(entry.duration || 0), 0),
+        averageHoursPerDay: weeklyEntries.reduce((sum, entry) => sum + parseFloat(entry.duration || 0), 0) / 5, // Business days
+        uniqueRequestors: [...new Set(weeklyEntries.map(entry => entry.requestor).filter(Boolean))],
+        uniqueTags: [...new Set(weeklyEntries.flatMap(entry => 
+          entry.tags ? entry.tags.split(',').map(tag => tag.trim()).filter(Boolean) : []
+        ))],
+        dailyBreakdown: {}
+      },
+      analytics: {
+        timeByRequestor: {},
+        timeByTag: {},
+        dailyHours: {},
+        workPatterns: {
+          mostProductiveDay: null,
+          averageTaskDuration: 0,
+          taskDistribution: {}
+        }
+      },
+      entries: weeklyEntries.map(entry => ({
+        id: entry.id,
+        date: new Date(entry.timestamp).toISOString().split('T')[0],
+        dayOfWeek: new Date(entry.timestamp).toLocaleDateString('en-US', { weekday: 'long' }),
+        task: entry.task,
+        requestor: entry.requestor,
+        duration: parseFloat(entry.duration || 0),
+        tags: entry.tags ? entry.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+        timestamp: entry.timestamp
+      })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    };
+    
+    // Calculate analytics
+    weeklyEntries.forEach(entry => {
+      const duration = parseFloat(entry.duration || 0);
+      const date = new Date(entry.timestamp).toISOString().split('T')[0];
+      const dayOfWeek = new Date(entry.timestamp).toLocaleDateString('en-US', { weekday: 'long' });
+      
+      // Time by requestor
+      if (entry.requestor) {
+        report.analytics.timeByRequestor[entry.requestor] = 
+          (report.analytics.timeByRequestor[entry.requestor] || 0) + duration;
+      }
+      
+      // Time by tag
+      if (entry.tags) {
+        entry.tags.split(',').forEach(tag => {
+          const cleanTag = tag.trim();
+          if (cleanTag) {
+            report.analytics.timeByTag[cleanTag] = 
+              (report.analytics.timeByTag[cleanTag] || 0) + duration;
+          }
+        });
+      }
+      
+      // Daily hours
+      report.analytics.dailyHours[date] = (report.analytics.dailyHours[date] || 0) + duration;
+      report.summary.dailyBreakdown[dayOfWeek] = (report.summary.dailyBreakdown[dayOfWeek] || 0) + duration;
+    });
+    
+    // Find most productive day
+    const dailyTotals = Object.entries(report.analytics.dailyHours);
+    if (dailyTotals.length > 0) {
+      const mostProductive = dailyTotals.reduce((max, [date, hours]) => 
+        hours > max.hours ? { date, hours } : max, { date: null, hours: 0 });
+      report.analytics.workPatterns.mostProductiveDay = {
+        date: mostProductive.date,
+        hours: mostProductive.hours,
+        dayOfWeek: mostProductive.date ? new Date(mostProductive.date).toLocaleDateString('en-US', { weekday: 'long' }) : null
+      };
+    }
+    
+    // Calculate average task duration
+    if (weeklyEntries.length > 0) {
+      report.analytics.workPatterns.averageTaskDuration = 
+        weeklyEntries.reduce((sum, entry) => sum + parseFloat(entry.duration || 0), 0) / weeklyEntries.length;
+    }
+    
+    // Add AI-friendly context
+    report.aiContext = {
+      purpose: "This weekly work log is intended for AI analysis to provide insights on productivity, work patterns, and time allocation.",
+      suggestedAnalysisAreas: [
+        "Time allocation across different requestors/clients",
+        "Productivity patterns by day of week",
+        "Task categorization and time distribution",
+        "Work-life balance indicators",
+        "Efficiency trends and recommendations"
+      ],
+      dataQuality: {
+        hasTimeTracking: weeklyEntries.length > 0,
+        hasRequestorData: weeklyEntries.some(e => e.requestor),
+        hasTagData: weeklyEntries.some(e => e.tags),
+        completenessScore: weeklyEntries.length > 0 ? 
+          (weeklyEntries.filter(e => e.task && e.requestor && e.duration).length / weeklyEntries.length) : 0
+      }
+    };
+    
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+    const filename = `weekly-report-${report.metadata.periodStart}-to-${report.metadata.periodEnd}-${timestamp}.json`;
+    const desktopPath = path.join(os.homedir(), 'Desktop', filename);
+    
+    // Write file to desktop
+    fs.writeFileSync(desktopPath, JSON.stringify(report, null, 2));
+    
+    return {
+      success: true,
+      filename: filename,
+      fullPath: desktopPath,
+      entryCount: weeklyEntries.length,
+      totalHours: report.metadata.totalHours,
+      period: `${report.metadata.periodStart} to ${report.metadata.periodEnd}`
+    };
+    
+  } catch (error) {
+    console.error('Error generating weekly report:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});

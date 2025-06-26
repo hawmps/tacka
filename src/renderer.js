@@ -330,6 +330,55 @@ async function mergeItem(type, sourceName) {
   }
 }
 
+function calculateLastBusinessWeek() {
+  const today = new Date();
+  const currentDay = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+  
+  // Calculate days back to get to last Friday
+  let daysToLastFriday;
+  if (currentDay === 0) { // Sunday
+    daysToLastFriday = 2;
+  } else if (currentDay === 1) { // Monday
+    daysToLastFriday = 3;
+  } else { // Tuesday-Saturday
+    daysToLastFriday = currentDay + 1;
+  }
+  
+  const lastFriday = new Date(today);
+  lastFriday.setDate(today.getDate() - daysToLastFriday);
+  
+  // Last business week is Monday to Friday
+  const lastMonday = new Date(lastFriday);
+  lastMonday.setDate(lastFriday.getDate() - 4);
+  
+  // Set times for proper date comparison
+  lastMonday.setHours(0, 0, 0, 0);
+  lastFriday.setHours(23, 59, 59, 999);
+  
+  return { startDate: lastMonday, endDate: lastFriday };
+}
+
+async function generateWeeklyReport() {
+  const statusDiv = document.getElementById('report-status');
+  statusDiv.textContent = 'Generating weekly report...';
+  
+  try {
+    const { startDate, endDate } = calculateLastBusinessWeek();
+    const report = await ipcRenderer.invoke('generate-weekly-report', { startDate, endDate });
+    
+    if (report.success) {
+      statusDiv.innerHTML = `Weekly report generated successfully!<br>
+        <strong>Period:</strong> ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}<br>
+        <strong>File:</strong> ${report.filename}<br>
+        <strong>Entries:</strong> ${report.entryCount} entries, ${report.totalHours.toFixed(2)} hours`;
+    } else {
+      statusDiv.textContent = `Error: ${report.error}`;
+    }
+  } catch (error) {
+    statusDiv.textContent = `Error generating report: ${error.message}`;
+  }
+}
+
 let allEntries = [];
 let currentDateFilter = 'all';
 let currentAnalyticsView = 'table';
