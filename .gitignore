@@ -111,3 +111,27 @@ Thumbs.db
 # Electron-specific
 app/node_modules/
 release-builds/
+
+# Code signing certificates and keys - NEVER COMMIT THESE!
+*.p12
+*.pfx
+*.cer
+*.crt
+*.pem
+*.key
+*.keychain
+*.mobileprovision
+*.provisionprofile
+certificates/
+certs/
+keys/
+
+# Environment files containing sensitive data
+.env.local
+.env.production
+.env.staging
+*.env.local
+
+# Build secrets
+build-secrets/
+secrets/
